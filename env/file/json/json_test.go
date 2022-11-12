@@ -29,6 +29,20 @@ import (
 	"github.com/apolloconfig/agollo/v4/utils"
 )
 
+var (
+	jsonStr = `{
+  "appId": "100004458",
+  "cluster": "default",
+  "namespaceName": "application",
+  "configurations": {
+    "key1":"value1",
+    "key2":"value2",
+    "test": [1, 2]
+  },
+  "releaseKey": "20170430092936-dee2d58e74515ff3"
+}`
+)
+
 func TestCreateDir(t *testing.T) {
 	configPath := "conf"
 	f := &FileHandler{}
@@ -48,17 +62,6 @@ func TestCreateDir(t *testing.T) {
 func TestJSONFileHandler_WriteConfigDirFile(t *testing.T) {
 	extension.SetFileHandler(&FileHandler{})
 	configPath := "json-conf"
-	jsonStr := `{
-  "appId": "100004458",
-  "cluster": "default",
-  "namespaceName": "application",
-  "configurations": {
-    "key1":"value1",
-    "key2":"value2",
-    "test": [1, 2]
-  },
-  "releaseKey": "20170430092936-dee2d58e74515ff3"
-}`
 
 	config, err := createApolloConfigWithJSON([]byte(jsonStr))
 	os.RemoveAll(configPath)
@@ -74,42 +77,26 @@ func TestJSONFileHandler_WriteConfigDirFile(t *testing.T) {
 func TestJSONFileHandler_WriteConfigFile(t *testing.T) {
 	extension.SetFileHandler(&FileHandler{})
 	configPath := ""
-	jsonStr := `{
-  "appId": "100004458",
-  "cluster": "default",
-  "namespaceName": "application",
-  "configurations": {
-    "key1":"value1",
-    "key2":"value2",
-    "test": [1, 2]
-  },
-  "releaseKey": "20170430092936-dee2d58e74515ff3"
-}`
 
 	config, err := createApolloConfigWithJSON([]byte(jsonStr))
-	os.Remove(extension.GetFileHandler().GetConfigFile(configPath, config.AppID, config.NamespaceName))
 
 	Assert(t, err, NilVal())
 	e := extension.GetFileHandler().WriteConfigFile(config, configPath)
 	Assert(t, e, NilVal())
+
+	os.Remove(extension.GetFileHandler().GetConfigFile(configPath, config.AppID, config.NamespaceName))
 }
 
 func TestJSONFileHandler_LoadConfigFile(t *testing.T) {
 	extension.SetFileHandler(&FileHandler{})
-	jsonStr := `{
-  "appId": "100004458",
-  "cluster": "default",
-  "namespaceName": "application",
-  "configurations": {
-    "key1":"value1",
-    "key2":"value2",
-    "test": [1, 2]
-  },
-  "releaseKey": "20170430092936-dee2d58e74515ff3"
-}`
+	configPath := ""
 
+	// data preparing
 	config, err := createApolloConfigWithJSON([]byte(jsonStr))
+	Assert(t, err, NilVal())
+	e := extension.GetFileHandler().WriteConfigFile(config, configPath)
 
+	// config load
 	Assert(t, err, NilVal())
 	newConfig, e := extension.GetFileHandler().LoadConfigFile("", config.AppID, config.NamespaceName)
 
@@ -119,6 +106,8 @@ func TestJSONFileHandler_LoadConfigFile(t *testing.T) {
 	Assert(t, config.ReleaseKey, Equal(newConfig.ReleaseKey))
 	Assert(t, config.Cluster, Equal(newConfig.Cluster))
 	Assert(t, config.NamespaceName, Equal(newConfig.NamespaceName))
+
+	os.Remove(extension.GetFileHandler().GetConfigFile(configPath, config.AppID, config.NamespaceName))
 }
 
 func createApolloConfigWithJSON(b []byte) (*config.ApolloConfig, error) {
