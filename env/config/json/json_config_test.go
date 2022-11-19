@@ -36,6 +36,9 @@ var (
 func TestLoadJsonConfig(t *testing.T) {
 	c, err := jsonConfigFile.Load(appConfigFile, Unmarshal)
 	config := c.(*config.AppConfig)
+	if config != nil {
+		config.Init()
+	}
 	t.Log(config)
 
 	Assert(t, err, NilVal())
@@ -73,6 +76,9 @@ func TestCreateAppConfigWithJson(t *testing.T) {
 	}`
 	c, err := Unmarshal([]byte(jsonStr))
 	config := c.(*config.AppConfig)
+	if config != nil {
+		config.Init()
+	}
 	t.Log(config)
 
 	Assert(t, err, NilVal())
@@ -124,6 +130,9 @@ func TestCreateAppConfigWithJsonDefault(t *testing.T) {
 	}`
 	c, err := Unmarshal([]byte(jsonStr))
 	config := c.(*config.AppConfig)
+	if config != nil {
+		config.Init()
+	}
 	t.Log(err)
 
 	Assert(t, err, NilVal())

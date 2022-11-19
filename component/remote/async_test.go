@@ -182,7 +182,7 @@ func initNotifications() *config.AppConfig {
 // will hold 5s and keep response 404
 func runErrorResponse() *httptest.Server {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusForbidden)
 	}))
 
 	return ts

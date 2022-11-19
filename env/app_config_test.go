@@ -146,13 +146,16 @@ func TestLoadEnvConfig(t *testing.T) {
 
 	err = os.Setenv(appConfigFilePath, envConfigFile)
 	envConfig, envConfigErr := getLoadAppConfig(nil)
+	if envConfig != nil {
+		envConfig.Init()
+	}
 	t.Log(config)
 
 	Assert(t, envConfigErr, NilVal())
 	Assert(t, envConfig, NotNilVal())
 	Assert(t, envConfig.AppID, Equal(config.AppID))
 	Assert(t, envConfig.Cluster, Equal(config.Cluster))
-	Assert(t, envConfig.GetNamespace(), Equal(config.GetNamespace()))
+	Assert(t, envConfig.NamespaceName, Equal(config.NamespaceName))
 	Assert(t, envConfig.IP, Equal(config.IP))
 
 	os.Remove(envConfigFile)
