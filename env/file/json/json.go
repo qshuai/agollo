@@ -24,9 +24,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/apolloconfig/agollo/v4/component/log"
-	"github.com/apolloconfig/agollo/v4/env/config"
-	jsonConfig "github.com/apolloconfig/agollo/v4/env/config/json"
+	"github.com/qshuai/agollo/v4/component/log"
+	"github.com/qshuai/agollo/v4/env/config"
+	jsonConfig "github.com/qshuai/agollo/v4/env/config/json"
 )
 
 // Suffix 默认文件保存类型
@@ -106,7 +106,7 @@ func (fileHandler *FileHandler) LoadConfigFile(configDir string, appID string, n
 	})
 
 	if c == nil || e != nil {
-		log.Errorf("loadConfigFile fail,error:", e)
+		log.Errorf("loadConfigFile fail, error:", e)
 		return nil, e
 	}
 

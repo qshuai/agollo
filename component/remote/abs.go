@@ -18,13 +18,12 @@
 package remote
 
 import (
-	"strconv"
 	"time"
 
-	"github.com/apolloconfig/agollo/v4/component/log"
-	"github.com/apolloconfig/agollo/v4/env"
-	"github.com/apolloconfig/agollo/v4/env/config"
-	"github.com/apolloconfig/agollo/v4/protocol/http"
+	"github.com/qshuai/agollo/v4/component/log"
+	"github.com/qshuai/agollo/v4/env"
+	"github.com/qshuai/agollo/v4/env/config"
+	"github.com/qshuai/agollo/v4/protocol/http"
 )
 
 // AbsApolloConfig 抽象 apollo 配置
@@ -46,12 +45,7 @@ func (a *AbsApolloConfig) SyncWithNamespace(namespace string, appConfigFunc func
 		Timeout: notifyConnectTimeout,
 	}
 	if appConfig.SyncServerTimeout > 0 {
-		duration, err := time.ParseDuration(strconv.Itoa(appConfig.SyncServerTimeout) + "s")
-		if err != nil {
-			log.Errorf("parse sync server timeout %s fail, error:%v", err)
-			return nil
-		}
-		c.Timeout = duration
+		c.Timeout = time.Duration(appConfig.SyncServerTimeout) * time.Second
 	}
 
 	callback := a.remoteApollo.CallBack(namespace)
@@ -62,7 +56,7 @@ func (a *AbsApolloConfig) SyncWithNamespace(namespace string, appConfigFunc func
 	}
 
 	if apolloConfig == nil {
-		log.Debug("apolloConfig is nil")
+		log.Debugf("apolloConfig is nil, please check namespace: %s", namespace)
 		return nil
 	}
 
