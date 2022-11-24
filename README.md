@@ -66,6 +66,25 @@ func main() {
 }
 ```
 
+### 动态namespace特性
+支持使用单个或者多个正则表达式来表示namespace的名称，实现在程序运行中读取新创建namespace的配置信息；增加的新配置项如下所示：
+```
+func main() {
+	c := &config.AppConfig{
+		AppID:          "testApplication_yang",
+		Cluster:        "dev",
+		IP:             "http://106.54.227.205:8080",
+		IsBackupConfig: true,
+		Secret:         "6ce3ff7e96a24335a9634fe9abca6d51",
+		NamespaceName:  ".*\\.yaml",
+		Dynamic                 bool          `json:"dynamic"`                 // 是否开启正则表达式形式的namespace配置
+		SyncNamespaceInterval   time.Duration `json:"sync_namespace_interval"` // 拉取最新namespace的时间间隔，最小1s
+		AuthorizationToken      string        `json:"authorization_token"`     // 自定义的认证（如果没有特殊授权需求，则不用设置）
+	}
+
+	...
+```
+
 ## 更多用法
 
 ***使用Demo*** ：[agollo_demo](https://github.com/zouyx/agollo_demo)
