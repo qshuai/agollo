@@ -47,17 +47,19 @@ func (c *ConfigComponent) SetCache(cache *storage.Cache) {
 
 // Start 启动配置组件定时器
 func (c *ConfigComponent) Start() {
-	t2 := time.NewTimer(longPollInterval)
+	t := time.NewTicker(longPollInterval)
+	defer t.Stop()
+
 	instance := remote.CreateAsyncApolloConfig()
 	// long poll for sync
 	for {
 		select {
-		case <-t2.C:
+		case <-t.C:
 			configs := instance.Sync(c.appConfigFunc)
 			for _, apolloConfig := range configs {
 				c.cache.UpdateApolloConfig(apolloConfig, c.appConfigFunc)
 			}
-			t2.Reset(longPollInterval)
+			t.Reset(longPollInterval)
 		}
 	}
 }
