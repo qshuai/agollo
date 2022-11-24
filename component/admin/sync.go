@@ -35,10 +35,11 @@ func (s *SyncAdminServiceComponent) Start() {
 		services.Store(srvs)
 	}
 
-	ticker := time.NewTimer(syncInterval)
+	t := time.NewTicker(syncInterval)
+	defer t.Stop()
 	for {
 		select {
-		case <-ticker.C:
+		case <-t.C:
 			srvs, err = SyncAdminService(s.appConfig)
 			if err != nil {
 				log.Errorf("sync admin service err: %s", err)
@@ -49,7 +50,7 @@ func (s *SyncAdminServiceComponent) Start() {
 			}
 		}
 
-		ticker.Reset(syncInterval)
+		t.Reset(syncInterval)
 	}
 }
 

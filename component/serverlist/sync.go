@@ -50,12 +50,13 @@ func (s *SyncServerIPListComponent) Start() {
 	SyncServerIPList(s.appConfig)
 	log.Debug("syncServerIpList started")
 
-	t2 := time.NewTimer(refreshIPListInterval)
+	t := time.NewTicker(refreshIPListInterval)
+	defer t.Stop()
 	for {
 		select {
-		case <-t2.C:
+		case <-t.C:
 			SyncServerIPList(s.appConfig)
-			t2.Reset(refreshIPListInterval)
+			t.Reset(refreshIPListInterval)
 		}
 	}
 }

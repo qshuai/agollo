@@ -21,7 +21,8 @@ func (n *SyncNamespaceListComponent) Start() {
 		interval = time.Second
 	}
 
-	t := time.NewTimer(interval)
+	t := time.NewTicker(interval)
+	defer t.Stop()
 	var err error
 	for {
 		select {
