@@ -60,6 +60,7 @@ func init() {
 }
 
 var syncApolloConfig = remote.CreateSyncApolloConfig()
+var asyncApolloConfig = remote.CreateAsyncApolloConfig()
 
 // Client apollo 客户端接口
 type Client interface {
@@ -68,7 +69,6 @@ type Client interface {
 	GetConfigCache(namespace string) agcache.CacheInterface
 	GetDefaultConfigCache() agcache.CacheInterface
 	GetApolloConfigCache() agcache.CacheInterface
-	// AddNamespace(namespace string) error
 	GetNamespace() string
 	GetValue(key string) string
 	GetStringValue(key string, defaultValue string) string
@@ -80,6 +80,7 @@ type Client interface {
 	AddChangeListener(listener storage.ChangeListener)
 	RemoveChangeListener(listener storage.ChangeListener)
 	GetChangeListeners() *list.List
+	GetReleaseKey(namespace string) (string, error)
 	UseEventDispatch()
 }
 
@@ -129,12 +130,15 @@ func StartWithConfig(loadAppConfig func() (*config.AppConfig, error)) (Client, e
 	if len(configs) == 0 && appConfig != nil && appConfig.MustStart {
 		return nil, errors.New("start failed cause no config was read")
 	}
-
 	for _, apolloConfig := range configs {
 		c.cache.UpdateApolloConfig(apolloConfig, c.getAppConfig)
 	}
 
-	log.Debug("init notifySyncConfigServices finished")
+	// 设置releaseKey
+	config.SplitNamespaces(appConfig.GetNamespace(), func(namespace string) {
+		conf := asyncApolloConfig.SyncWithNamespace(namespace, c.getAppConfig)
+		c.cache.GetConfig(namespace).SetReleaseKey(conf.ReleaseKey)
+	})
 
 	// start long poll sync config
 	configComponent := &notify.ConfigComponent{}
@@ -167,9 +171,9 @@ func (c *internalClient) GetConfigAndInit(namespace string) *storage.Config {
 		return nil
 	}
 
-	config := c.cache.GetConfig(namespace)
+	conf := c.cache.GetConfig(namespace)
 
-	if config == nil {
+	if conf == nil {
 		// init cache
 		storage.CreateNamespaceConfig(namespace)
 
@@ -177,26 +181,26 @@ func (c *internalClient) GetConfigAndInit(namespace string) *storage.Config {
 		syncApolloConfig.SyncWithNamespace(namespace, c.getAppConfig)
 	}
 
-	config = c.cache.GetConfig(namespace)
+	conf = c.cache.GetConfig(namespace)
 
-	return config
+	return conf
 }
 
 // GetConfigCache 根据namespace获取apollo配置的缓存
 func (c *internalClient) GetConfigCache(namespace string) agcache.CacheInterface {
-	config := c.GetConfigAndInit(namespace)
-	if config == nil {
+	conf := c.GetConfigAndInit(namespace)
+	if conf == nil {
 		return nil
 	}
 
-	return config.GetCache()
+	return conf.GetCache()
 }
 
 // GetDefaultConfigCache 获取默认缓存
 func (c *internalClient) GetDefaultConfigCache() agcache.CacheInterface {
-	config := c.GetConfigAndInit(storage.GetDefaultNamespace())
-	if config != nil {
-		return config.GetCache()
+	conf := c.GetConfigAndInit(storage.GetDefaultNamespace())
+	if conf != nil {
+		return conf.GetCache()
 	}
 	return nil
 }
@@ -224,6 +228,10 @@ func (c *internalClient) AddNamespace(namespace string) error {
 	for _, apolloConfig := range configs {
 		c.cache.UpdateApolloConfig(apolloConfig, c.getAppConfig)
 	}
+
+	// 维护releaseKey
+	conf := asyncApolloConfig.SyncWithNamespace(namespace, c.getAppConfig)
+	c.cache.GetConfig(namespace).SetReleaseKey(conf.ReleaseKey)
 
 	return nil
 }
@@ -305,6 +313,15 @@ func (c *internalClient) RemoveChangeListener(listener storage.ChangeListener) {
 // GetChangeListeners 获取配置修改监听器列表
 func (c *internalClient) GetChangeListeners() *list.List {
 	return c.cache.GetChangeListeners()
+}
+
+func (c *internalClient) GetReleaseKey(namespace string) (string, error) {
+	conf := c.cache.GetConfig(namespace)
+	if conf == nil {
+		return "", errors.New("namespace not found")
+	}
+
+	return conf.GetReleaseKey(), nil
 }
 
 // UseEventDispatch  添加为某些key分发event功能
