@@ -137,7 +137,9 @@ func StartWithConfig(loadAppConfig func() (*config.AppConfig, error)) (Client, e
 	// 设置releaseKey
 	config.SplitNamespaces(appConfig.GetNamespace(), func(namespace string) {
 		conf := asyncApolloConfig.SyncWithNamespace(namespace, c.getAppConfig)
-		c.cache.GetConfig(namespace).SetReleaseKey(conf.ReleaseKey)
+		if conf != nil {
+			c.cache.GetConfig(namespace).SetReleaseKey(conf.ReleaseKey)
+		}
 	})
 
 	// start long poll sync config
@@ -231,7 +233,9 @@ func (c *internalClient) AddNamespace(namespace string) error {
 
 	// 维护releaseKey
 	conf := asyncApolloConfig.SyncWithNamespace(namespace, c.getAppConfig)
-	c.cache.GetConfig(namespace).SetReleaseKey(conf.ReleaseKey)
+	if conf != nil {
+		c.cache.GetConfig(namespace).SetReleaseKey(conf.ReleaseKey)
+	}
 
 	return nil
 }
