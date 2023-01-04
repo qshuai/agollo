@@ -60,7 +60,12 @@ func createMockApolloConfig(expireTime int) *internalClient {
 	// int slice
 	configs["intSlice"] = []int{1, 2}
 
-	client.cache.UpdateApolloConfigCache(configs, expireTime, storage.GetDefaultNamespace())
+	client.cache.UpdateApolloConfigCache(&config.ApolloConfig{
+		ApolloConnConfig: config.ApolloConnConfig{
+			ReleaseKey: "20230104101538-e15771c6c641test",
+		},
+		Configurations: configs,
+	}, expireTime, storage.GetDefaultNamespace())
 
 	return client
 }

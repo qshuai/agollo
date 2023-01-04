@@ -56,12 +56,12 @@ func (c *Cache) GetConfig(namespace string) *Config {
 		return nil
 	}
 
-	config, ok := c.apolloConfigCache.Load(namespace)
+	conf, ok := c.apolloConfigCache.Load(namespace)
 	if !ok {
 		return nil
 	}
 
-	return config.(*Config)
+	return conf.(*Config)
 }
 
 // CreateNamespaceConfig 根据namespace初始化agollo内部配置
@@ -104,10 +104,11 @@ func initConfig(namespace string, factory agcache.CacheFactory) *Config {
 
 // Config apollo配置项
 type Config struct {
-	namespace string
-	cache     agcache.CacheInterface
-	isInit    atomic.Value
-	waitInit  sync.WaitGroup
+	namespace  string
+	releaseKey string
+	cache      agcache.CacheInterface
+	isInit     atomic.Value
+	waitInit   sync.WaitGroup
 }
 
 // GetIsInit 获取标志
@@ -123,6 +124,16 @@ func (c *Config) GetWaitInit() *sync.WaitGroup {
 // GetCache 获取cache
 func (c *Config) GetCache() agcache.CacheInterface {
 	return c.cache
+}
+
+// SetReleaseKey 设置该namespace的releaseKey
+func (c *Config) SetReleaseKey(releaseKey string) {
+	c.releaseKey = releaseKey
+}
+
+// GetReleaseKey 获取该namespace的releaseKey
+func (c *Config) GetReleaseKey() string {
+	return c.releaseKey
 }
 
 // getConfigValue 获取配置值
@@ -461,7 +472,7 @@ func (c *Cache) UpdateApolloConfig(apolloConfig *config.ApolloConfig, appConfigF
 	appConfig.SetCurrentApolloConfig(&apolloConfig.ApolloConnConfig)
 
 	// get change list
-	changeList := c.UpdateApolloConfigCache(apolloConfig.Configurations, configCacheExpireTime, apolloConfig.NamespaceName)
+	changeList := c.UpdateApolloConfigCache(apolloConfig, configCacheExpireTime, apolloConfig.NamespaceName)
 
 	notify := appConfig.GetNotificationsMap().GetNotify(apolloConfig.NamespaceName)
 
@@ -484,12 +495,13 @@ func (c *Cache) UpdateApolloConfig(apolloConfig *config.ApolloConfig, appConfigF
 }
 
 // UpdateApolloConfigCache 根据conf[ig server返回的内容更新内存
-func (c *Cache) UpdateApolloConfigCache(configurations map[string]interface{}, expireTime int, namespace string) map[string]*ConfigChange {
-	config := c.GetConfig(namespace)
-	if config == nil {
-		config = initConfig(namespace, extension.GetCacheFactory())
-		c.apolloConfigCache.Store(namespace, config)
+func (c *Cache) UpdateApolloConfigCache(apolloConfig *config.ApolloConfig, expireTime int, namespace string) map[string]*ConfigChange {
+	conf := c.GetConfig(namespace)
+	if conf == nil {
+		conf = initConfig(namespace, extension.GetCacheFactory())
+		c.apolloConfigCache.Store(namespace, conf)
 	}
+	conf.releaseKey = apolloConfig.ReleaseKey
 
 	isInit := false
 	defer func(c *Config) {
@@ -502,15 +514,16 @@ func (c *Cache) UpdateApolloConfigCache(configurations map[string]interface{}, e
 		}
 		c.isInit.Store(isInit)
 		c.waitInit.Done()
-	}(config)
+	}(conf)
 
-	if (configurations == nil || len(configurations) == 0) && config.cache.EntryCount() == 0 {
+	configurations := apolloConfig.Configurations
+	if (configurations == nil || len(configurations) == 0) && conf.cache.EntryCount() == 0 {
 		return nil
 	}
 
 	// get old keys
 	mp := map[string]bool{}
-	config.cache.Range(func(key, value interface{}) bool {
+	conf.cache.Range(func(key, value interface{}) bool {
 		mp[key.(string)] = true
 		return true
 	})
@@ -527,13 +540,13 @@ func (c *Cache) UpdateApolloConfigCache(configurations map[string]interface{}, e
 				changes[key] = createAddConfigChange(value)
 			} else {
 				// update
-				oldValue, _ := config.cache.Get(key)
+				oldValue, _ := conf.cache.Get(key)
 				if !reflect.DeepEqual(oldValue, value) {
 					changes[key] = createModifyConfigChange(oldValue, value)
 				}
 			}
 
-			if err := config.cache.Set(key, value, expireTime); err != nil {
+			if err := conf.cache.Set(key, value, expireTime); err != nil {
 				log.Errorf("set key %s to cache error %s", key, err)
 			}
 			delete(mp, key)
@@ -543,10 +556,10 @@ func (c *Cache) UpdateApolloConfigCache(configurations map[string]interface{}, e
 	// remove del keys
 	for key := range mp {
 		// get old value and del
-		oldValue, _ := config.cache.Get(key)
+		oldValue, _ := conf.cache.Get(key)
 		changes[key] = createDeletedConfigChange(oldValue)
 
-		config.cache.Del(key)
+		conf.cache.Del(key)
 	}
 	isInit = true
 
